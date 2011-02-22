@@ -1,0 +1,17 @@
+
+ String buffer implementation.
+ author : Guillaume Maudoux
+
+* This code produce fully functionnal str_buf lib.
+
+  static library is produced by running
+
+    make 
+
+  one can also run tests unsing
+    
+    make test
+
+* Full documentation in str_buf.h !
+ 
+

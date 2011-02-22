@@ -1,0 +1,79 @@
+/* A simple bounded-buffer program using a one-word shared memory. 
+ * Created by Henry Walker, 2004
+ * Last modified by Janet Davis, 26 September 2006
+ */
+
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>          
+#include <stdio.h>
+#include <sys/mman.h>
+
+#define SIZE sizeof(int)   /* size of [int] integer */
+#define RUN_LENGTH 10      /* number of iterations in test run */
+
+/* Parent process: writes squares of numbers to shared memory
+ * for child to read.
+ */
+void producer( caddr_t shared_memory ) {
+    int i;         /* a counter variable */
+
+    for( i = 0; i < RUN_LENGTH; i++ ) { 
+      /* store the square of the counter into shared memory */
+      *shared_memory = i * i; 
+
+      printf( "Parent's report: current index = %2d\n", i ); 
+      sleep( 1 );  /* wait for child to read value */
+    }
+}
+
+/* Child process: reads numbers from shared memory and displays them.
+ */
+void consumer( caddr_t shared_memory ) {
+    int i;         /* a counter variable */
+    int value;     /* value read by child */
+
+    for( i = 0; i < RUN_LENGTH; i++ ) { 
+      sleep( 1 );  /* wait for memory to be updated */
+      value = *shared_memory;
+      printf( "Child's report:  current value = %2d\n", value );
+    }
+}
+
+int main (void) {  
+  pid_t pid;               /* variable to record process id of child */
+  caddr_t shared_memory;   /* shared memory base address */
+
+  /* set up shared memory segment using mmap */
+  shared_memory = mmap( 0,               /* start (0 means don't care) */
+                        SIZE,                      /* size to allocate */
+                        PROT_READ | PROT_WRITE,           /* protection*/
+                        MAP_SHARED | MAP_ANONYMOUS, 
+			         /* shared memory not backed by a file */
+		        -1, 0);  /* ignored; relate to backing by file */
+
+  /* check for errors */
+  if( shared_memory == (caddr_t)-1 ) { 
+    perror ("error in mmap while allocating shared memory\n");
+    exit (1);
+  }
+
+  /* apply fork and check for error */
+  if (( pid = fork()) < 0 ) {
+    perror ("error in fork");  
+    exit (1);
+  }
+
+  if (0 == pid) { 
+    printf( "The child process begins.\n" );
+    consumer( shared_memory );
+    printf ("The child is done\n");
+  } else { 
+    printf( "The parent process begins.\n" );
+    producer( shared_memory );
+    wait( NULL );
+    printf( "The parent is done\n" );
+  }
+  exit( 0 );
+}

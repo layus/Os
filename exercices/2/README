@@ -1,0 +1,14 @@
+Guillaume Maudoux
+Exercice 2 - Ingi 113 : Os
+
+Simple tests :
+
+./rarcrack -t 4 rars/file2.rar :
+ ~5h sur lagaffe (salle intel)
+
+./rarcrack -p 4 rars/file2.rar :
+idem.
+
+Ceci est assez coherent puisque sous linux les threads et les processus 
+sont quasiment identiques, seule change la partie de la mémoire qui est 
+dupliquée (en gros...).

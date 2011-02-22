@@ -1,0 +1,29 @@
+#!/usr/bin/tcc -run
+
+#include <stdlib.h>
+#include <stdio.h>
+
+int inc(char *c){
+    if(c[0]==0) return 0;
+    if(c[0]=='z'){
+        c[0]='a';
+        return inc(c+sizeof(char));
+    }   
+    c[0]++;
+    return 1;
+}
+
+int main(void){
+    int n = 3;
+    int i,j;
+    char *c = malloc((n+1)*sizeof(char));
+    for(i=1;i<=n;i++){
+        for(j=0;j<i;j++) c[j]='a';
+        c[i]=0;
+        do {
+            printf("%s\n",c);
+        } while(inc(c));
+    }
+    free(c);
+}
+

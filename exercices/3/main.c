@@ -1,4 +1,25 @@
-
+/*
+ * main.c
+ * ------
+ *
+ *  author : Guillaume Maudoux <guillaume.maudoux@student.uclouvain.be>
+ *
+ *  This file describes program ZIPCRACK, which attempts to find the
+ *  password for a zip archive using dictionnary attack.
+ *
+ *  The code is split into 3 parts
+ *
+ *  ## Main ##
+ *  - User interaction
+ *  - Configuration ~ options
+ *
+ *  ## Cracking w/ threads ##
+ *
+ *  ## Cracking with processes ##
+ *
+ *  Most of the complexity comes from using both threads and processes 
+ *  in the same program.
+ */
 
 #include <string.h>
 #include <stdio.h>
@@ -48,6 +69,8 @@ usage (void)
 char * crack_zip_threads(unsigned int );
 char * crack_zip_processes(unsigned int );
 
+/****************************** MAIN ***************************************/
+
 int 
 main (int argc, char * const * argv)
 {
@@ -57,7 +80,7 @@ main (int argc, char * const * argv)
     char * passwd;
 
     /* GETOPT */
-    while ((c = getopt(argc, argv, "p:t:d:s:l:")) != -1)
+    while ((c = getopt(argc, argv, "hp:t:d:s:l:")) != -1)
         switch (c)
         {
             case 'p':
@@ -77,6 +100,9 @@ main (int argc, char * const * argv)
             case 'l':
                 pass_len = atoi(optarg);
                 break;
+            case 'h':
+                usage();
+                break;
             case '?':
                 if (optopt == 'p' || optopt == 't' || optopt == 'd' ||
                         optopt == 's' || optopt == 'l' )
@@ -92,13 +118,15 @@ main (int argc, char * const * argv)
                 usage();
         }
     
+    /* MORE OPTS PARSING */    
     if( optind == argc ){  /* no more args, but zipfile needed */
         usage(); 
     }
 
+    /* ensure coherent size */
     buff_len = (buff_len >0)? buff_len : DEF_BUF_SIZE;
     pass_len = (pass_len >0)? pass_len : DEF_WORD_LEN;
-
+    
     /* OPEN & INIT FILES */
     if ( !(dict = fopen(dict_path,"r")) ){
         fprintf(stderr,"Error on opening file %s. ", dict_path);
@@ -106,21 +134,24 @@ main (int argc, char * const * argv)
         return 3;
     }
     
+    /* CRACK EACH FILE */
     for( c = optind; c < argc; c++){
+        /* open archive */
         if ( (archive = zip_load_archive(argv[c]) ) == NULL ) {
             printf("Unable to open archive %s\n", argv[ c ]);
             return 2;
         }
 
+        /* use apropriate method to chrack */
         if ( nb_t > 0 ) {
             passwd = crack_zip_threads(nb_t);
         } else if( nb_p > 0) {
             passwd = crack_zip_processes(nb_p);
         } else {
-            /* default case */
-            passwd = crack_zip_threads(1);
+            passwd = crack_zip_threads(2);
         }
         
+        /* check result */
         printf("File %s :\n", argv[c]);
         if ( passwd == NULL ) {
             puts("  Password not found.");
@@ -129,8 +160,10 @@ main (int argc, char * const * argv)
             free(passwd);
             passwd = NULL;
         }
-        fflush(stdout);
+        fflush(stdout); /* funny !, otherwise each process flushes on exit  */
+                        /* try to remove it to see !                        */
 
+        /* reset globals for next use */
         finished = 0;
         zip_close_archive(archive);
         archive = NULL;
@@ -140,7 +173,20 @@ main (int argc, char * const * argv)
     return 0;
 }
 
-/* THREADS */
+/***************************** THREADS *****************************/
+/*
+ * Common use of pthreads.
+ *
+ * We use a producer-consumer approach.
+ * So we find three functions :
+ * - thread_read() : consumer
+ * - thread_write() : producer
+ * - crack_zip_threads() : gathers all threaded cracking logic.
+ *
+ * Using home-made lib bounded_buffer.h. 
+ * More details in bounded_buffer.c
+ */
+
 void * 
 thread_read(void* arg){
     char * passwd = NULL;
@@ -216,7 +262,22 @@ exit:
     return return_val;
 }
 
-/* PROCESSES */
+/****************************** PROCESSES *********************************/
+/*
+ * Same in concepts as THEADS.
+ *
+ * This section requires more precisions as I used, on top of the bounded
+ * buffer to others ipc's :
+ *
+ * - signals : to handle termination before end of dictionnary file.
+ *
+ * - pipes : to return correct password from sub-process to main prog.
+ *
+ * This complication comes from the fact that i wanted to keep
+ * bbuf.c as general as possible.
+ *
+ * As with threads, more information in bbuf.{h,c}.
+ */
 
 int
 process_read(int pipe){

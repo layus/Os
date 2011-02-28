@@ -19,7 +19,7 @@ typedef struct bbuf bbuf;
  * Initialize a new buffer with n pointers
  */
 int
-bbuf_init(bbuf * buf, size_t string_len, size_t capacity);
+bbuf_init(bbuf ** buf, size_t string_len, size_t capacity);
 
 /*
  * take one item from the bounded buffer
@@ -41,6 +41,12 @@ bbuf_put(bbuf * buf, char * ptr);
  */
 void
 bbuf_put_len(bbuf * buf, char * ptr, size_t len);
+
+/*
+ * Notify end of input
+ */
+void 
+bbuf_close(bbuf * buf);
 
 /*
  * Clears all

@@ -3,54 +3,83 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdbool.h>
-#include <getopt.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <signal.h>
+#include <sys/wait.h>
+#include <pthread.h>
 
 #include "zip_crack.h"
 #include "bounded_buffer.h"
 #include "bbuf.h"
 
-bounded_buffer *buf;
-struct zip_archive * archive;
-volatile bool finished = false;
-int nb_t = 0, nb_p = 0;
-char * dict;
+struct {
+    bounded_buffer * t;
+    bbuf * p;
+} buf;
 
-#define BUF_SIZE 20
-#define WORD_LEN 50 /* In fact dict.txt contains max 24-car. words */
+struct zip_archive * archive;
+char * zip_file;
+FILE * dict;
+
+volatile bool finished = false;
+
+size_t pass_len = 0;
+size_t buff_len = 0;
+#define DEF_BUF_SIZE 20
+#define DEF_WORD_LEN 50 
 
 void
 usage (void)
 {
     printf("zipcrack [-t|-p N] [-s buf_size] [-l max_pswd_len]\n"
-           "         -d dict_file ZIP_FILE\n");
+           "         [-d dict_file] ZIP_FILE\n"
+           "\n"
+           " if -d is not specified,"
+                " dictionary file defaults to ./dict.txt \n"
+           " if none of -p or -t is specified, defaults to -t 1\n"
+           "\n"
+           " ALL SIZES SHOULD BE POSITIVE INTEGERS\n" );
+    exit(1);
 }
 
-void crack_zip(unsigned int nb_threads);
+char * crack_zip_threads(unsigned int );
+char * crack_zip_processes(unsigned int );
 
 int 
 main (int argc, char * const * argv)
 {
     int c;
+    char * dict_path = "dico.txt";
+    int nb_t = 0, nb_p = 0;
+    char * passwd;
 
     /* GETOPT */
-    while ((c = getopt(argc, argv, "p:t:d:")) != -1)
+    while ((c = getopt(argc, argv, "p:t:d:s:l:")) != -1)
         switch (c)
         {
             case 'p':
-                nb_p = atoi(optarg);
-                if(nb_t) usage();
+                if( (nb_p = atoi(optarg)) <=0 || nb_t ) 
+                    usage();
                 break;
             case 't':
-                nb_t = atoi(optarg);
-                if(nb_p) usage();
+                if( (nb_t = atoi(optarg)) <= 0 || nb_p )
+                       usage();
                 break;
             case 'd':
-                dict = optarg;
+                dict_path = optarg;
+                break;
+            case 's':
+                buff_len = atoi(optarg);
+                break;
+            case 'l':
+                pass_len = atoi(optarg);
                 break;
             case '?':
-                if (optopt == 'd')
+                if (optopt == 'p' || optopt == 't' || optopt == 'd' ||
+                        optopt == 's' || optopt == 'l' )
                     fprintf(stderr, "Option -%c requires an argument.\n", optopt);
                 else if (isprint (optopt))
                     fprintf(stderr, "Unknown option `-%c'.\n", optopt);
@@ -60,31 +89,248 @@ main (int argc, char * const * argv)
                             optopt);
                 return 1;
             default:
-                return 1;
+                usage();
         }
-        
-    if ( (archive = zip_load_archive(argv[optind])) == NULL) {
-        printf("Unable to open archive %s\n", argv[1]);
-        return 2;
+    
+    if( optind == argc ){  /* no more args, but zipfile needed */
+        usage(); 
+    }
+
+    buff_len = (buff_len >0)? buff_len : DEF_BUF_SIZE;
+    pass_len = (pass_len >0)? pass_len : DEF_WORD_LEN;
+
+    /* OPEN & INIT FILES */
+    if ( !(dict = fopen(dict_path,"r")) ){
+        fprintf(stderr,"Error on opening file %s. ", dict_path);
+        perror("Reason : ");
+        return 3;
     }
     
-    if ( !bounded_buffer_init(buf,BUF_SIZE) ){
-        perror("Error while creating shared buffer. Reason :");
-        goto finish;
+    for( c = optind; c < argc; c++){
+        if ( (archive = zip_load_archive(argv[c]) ) == NULL ) {
+            printf("Unable to open archive %s\n", argv[ c ]);
+            return 2;
+        }
+
+        if ( nb_t > 0 ) {
+            passwd = crack_zip_threads(nb_t);
+        } else if( nb_p > 0) {
+            passwd = crack_zip_processes(nb_p);
+        } else {
+            /* default case */
+            passwd = crack_zip_threads(1);
+        }
+        
+        printf("File %s :\n", argv[c]);
+        if ( passwd == NULL ) {
+            puts("  Password not found.");
+        } else {
+            printf("  Password is %s.\n", passwd);
+            free(passwd);
+            passwd = NULL;
+        }
+        fflush(stdout);
+
+        finished = 0;
+        zip_close_archive(archive);
+        archive = NULL;
+        fseek(dict, 0, SEEK_SET);
     }
 
-    crack_zip(5);
-
-    printf("Password not found\n");
-
-finish:   
-    zip_close_archive(archive);
     return 0;
 }
 
-void
-crack_zip(unsigned int nb_threads){
+/* THREADS */
+void * 
+thread_read(void* arg){
+    char * passwd = NULL;
+    
+    while( (passwd = bounded_buffer_get(buf.t) ) != NULL ){
+        if( zip_test_password(archive, passwd) == 0 ){
+            finished = 1;
+            break;
+        }
+        free(passwd);
+        passwd = NULL;
+    }
 
+    return passwd;
+}
+
+void 
+thread_write()
+{
+    char * word, *ptr;
+    while( !finished ){
+        word = malloc( pass_len*sizeof(char) );
+
+        if( fgets(word, pass_len, dict) == NULL ) {
+
+            bounded_buffer_close(buf.t);
+            free(word);
+            break;
+        }
+
+        if( (ptr = strchr(word, '\n')) != NULL){
+            *ptr = '\0';
+        } else { /* error, too long line */
+            fprintf(stderr,"Too long line,skipping. :\n %s\n",word);
+        } 
+
+        bounded_buffer_put(buf.t, word);
+    }
+    bounded_buffer_close(buf.t);
+}
+
+char *
+crack_zip_threads(unsigned int nb_threads)
+{
+    int i, ack;
+    pthread_t * threads;
+    void * out;
+    char * return_val = NULL;
+    
+    if( bounded_buffer_init(&buf.t,buff_len) < 0){
+        perror("Unable to init bounded buffer.\nReason :");
+        return NULL;
+    }
+
+    threads = malloc( nb_threads * sizeof(pthread_t));
+
+    for ( i=0; i< nb_threads; i++){
+        ack = pthread_create(&threads[i],NULL,&thread_read,NULL);
+        if( ack ) { i++; goto exit; }
+    }
+
+    thread_write();
+
+exit:
+    for(i-- ; i >= 0; i-- ){
+        pthread_join(threads[i], &out);
+        if ( out != NULL ){
+            return_val = out;
+        }
+    }
+
+    bounded_buffer_destroy(buf.t);
+    return return_val;
+}
+
+/* PROCESSES */
+
+int
+process_read(int pipe){
+    char * passwd = NULL;
+    int found = 0;
+
+    while( (passwd = bbuf_get(buf.p)) != NULL && !found )
+    {
+        if( zip_test_password(archive, passwd) == 0 )
+        {
+            if( write(pipe, passwd, pass_len) == -1) 
+                printf("Error in writing. Pass was %s.\n",passwd);
+            kill(getppid(), SIGUSR1);
+            found = 1;
+        }
+        free(passwd);
+        passwd = NULL;
+    }
+
+    return found;
+}
+
+void
+process_write()
+{
+    char * word, *ptr;
+    word = malloc( pass_len*sizeof(char) );
+
+    while( !finished ){
+        if( fgets(word, pass_len, dict) == NULL ){
+            break;
+        }
+        
+        if( (ptr = strchr(word, '\n')) != NULL){
+            *ptr = '\0';
+        } else { /* error, too long line */
+            fprintf(stderr,"Too long line,skipping. :\n %s\n",word);
+            continue;
+        } 
+
+        bbuf_put(buf.p, word);
+    }
+
+    bbuf_close(buf.p);
+    free(word);
+}
+
+static void
+sigusr1_handler( int signal )
+{
+    if ( signal == SIGUSR1 ) {
+        finished = 1;
+    }
+}
+
+char *
+crack_zip_processes(unsigned int nb_proc )
+{
+    int i;
+    pid_t * pids;
+    int out;
+    char * return_val = NULL;
+    int fd[2];
+    struct sigaction act, *old_act = NULL;
+
+    if( bbuf_init(&buf.p,pass_len, buff_len) < 0){
+        perror("Unable to init bounded buffer.\nReason :");
+        return (char *) -1;
+    }
+    
+    pipe(fd);
+    pids = malloc( nb_proc * sizeof(pid_t));
+    
+    /* set SIGUSR1 action */
+    act.sa_handler = &sigusr1_handler;
+    sigemptyset(&act.sa_mask);
+    act.sa_flags = 0;
+    sigaction(SIGUSR1, &act, old_act);
+
+    for ( i=0; i< nb_proc; i++){
+        
+        if( (pids[i] = fork()) < 0) {        /* BEGIN subprocess life */
+            i++;
+            goto exit;
+        }
+
+        if( pids[i] == 0){
+            close(fd[0]);
+            exit(process_read(fd[1]));      /* END subprocess life */
+        }
+    }
+
+    process_write();
+
+exit:
+
+    for( i--; i >= 0; i-- ){
+        kill(pids[i],SIGUSR1);
+        waitpid(pids[i], &out, 0);
+        if ( WIFEXITED(out) && WEXITSTATUS(out) == 1 ){
+            return_val = malloc( pass_len*sizeof(char) );
+            if( read(fd[0], return_val, pass_len) == -1 )
+                perror("Unable to read pipe output !");
+        }
+    }
+
+    close(fd[1]);
+    close(fd[0]);
+
+    /* restore signals */
+    sigaction(SIGUSR1, old_act, NULL);
+    
+    bbuf_destroy(buf.p);
+    return return_val;
 }
 
 

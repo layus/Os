@@ -17,7 +17,7 @@ typedef struct bounded_buffer bounded_buffer;
  * Initialize a new buffer with n pointers
  */
 int
-bounded_buffer_init(bounded_buffer * buf, unsigned short n);
+bounded_buffer_init(bounded_buffer ** buf, unsigned short n);
 
 /*
  * take one item from the bounded buffer
@@ -30,6 +30,18 @@ bounded_buffer_get(bounded_buffer * buf);
  */
 void
 bounded_buffer_put(bounded_buffer * buf, void * ptr);
+
+/*
+ * Notify readers that no more data will be added
+ */
+void
+bounded_buffer_close(bounded_buffer * buf);
+
+/*
+ * Clears all allocated memory
+ */
+void
+bounded_buffer_destroy(bounded_buffer * buf);
 
 #endif
 

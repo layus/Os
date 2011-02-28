@@ -1,4 +1,4 @@
-CFLAGS+=-Wall -Werror -ggdb -ansi -pedantic
+CFLAGS+=-Wall -Werror -ggdb -pedantic
 LDFLAGS+=-lpthread
 EXEC=zipcrack
 SOURCES=$(wildcard *.c)

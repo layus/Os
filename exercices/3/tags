@@ -1,0 +1,86 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.8	//
+BBUF_H	bbuf.h	12;"	d
+BOUNDED_BUFFER_H	bounded_buffer.h	10;"	d
+CC	Makefile	/^CC=gcc$/;"	m
+CRC_SIZE	zip_crack.h	5;"	d
+DEF_BUF_SIZE	main.c	31;"	d	file:
+DEF_WORD_LEN	main.c	32;"	d	file:
+EXEC	Makefile	/^EXEC=zipcrack$/;"	m
+FILE_SIZE	zip_crack.h	4;"	d
+HEADER_SIZE	zip_crack.h	6;"	d
+NB_SEMS	bbuf.c	/^    NB_SEMS         \/* Allocate NB_SEMS semaphores *\/$/;"	e	enum:__anon1	file:
+OBJECTS	Makefile	/^OBJECTS=$(SOURCES:.c=.o)$/;"	m
+SOURCES	Makefile	/^SOURCES=$(wildcard *.c)$/;"	m
+_SVID_SOURCE	bbuf.c	10;"	d	file:
+__ZIP_CRACK_H__	zip_crack.h	2;"	d
+_fgetu16	zip_crack.c	/^_fgetu16 (FILE * f)$/;"	f	file:
+_fgetu32	zip_crack.c	/^_fgetu32 (FILE * f)$/;"	f	file:
+_zip_test_unzip	zip_crack.c	/^_zip_test_unzip(const char * file, const char * pwd)$/;"	f	file:
+archive	main.c	/^struct zip_archive * archive;$/;"	v	typeref:struct:zip_archive
+bbuf	bbuf.c	/^struct bbuf{$/;"	s	file:
+bbuf	bbuf.h	/^typedef struct bbuf bbuf;$/;"	t	typeref:struct:bbuf
+bbuf_close	bbuf.c	/^bbuf_close(bbuf * buf)$/;"	f
+bbuf_destroy	bbuf.c	/^bbuf_destroy(bbuf * buf)$/;"	f
+bbuf_get	bbuf.c	/^bbuf_get(bbuf * buf)$/;"	f
+bbuf_init	bbuf.c	/^bbuf_init(bbuf ** buf, size_t string_len, size_t capacity)$/;"	f
+bbuf_put	bbuf.c	/^bbuf_put(bbuf * buf, char * ptr)$/;"	f
+bounded_buffer	bounded_buffer.c	/^struct bounded_buffer {$/;"	s	file:
+bounded_buffer	bounded_buffer.h	/^typedef struct bounded_buffer bounded_buffer;$/;"	t	typeref:struct:bounded_buffer
+bounded_buffer_close	bounded_buffer.c	/^bounded_buffer_close(bounded_buffer * buf)$/;"	f
+bounded_buffer_destroy	bounded_buffer.c	/^bounded_buffer_destroy(bounded_buffer * buf)$/;"	f
+bounded_buffer_get	bounded_buffer.c	/^bounded_buffer_get(bounded_buffer * buf)$/;"	f
+bounded_buffer_init	bounded_buffer.c	/^bounded_buffer_init(bounded_buffer ** buf, unsigned short n)$/;"	f
+bounded_buffer_put	bounded_buffer.c	/^bounded_buffer_put(bounded_buffer * buf, void * ptr)$/;"	f
+buf	main.c	/^} buf;$/;"	v	typeref:struct:__anon2
+buf_size	bbuf.c	/^    size_t buf_size;$/;"	m	struct:bbuf	file:
+buff_len	main.c	/^size_t buff_len = 0;$/;"	v
+buffer	zip_crack.h	/^    char buffer[HEADER_SIZE];$/;"	m	struct:zip_archive
+capacity	bbuf.c	/^    int capacity, string_len;$/;"	m	struct:bbuf	file:
+capacity	bounded_buffer.c	/^    unsigned short capacity, size, r_index, w_index;$/;"	m	struct:bounded_buffer	file:
+crack_zip_processes	main.c	/^crack_zip_processes(unsigned int nb_proc )$/;"	f
+crack_zip_threads	main.c	/^crack_zip_threads(unsigned int nb_threads)$/;"	f
+crc32	zip_crack.c	64;"	d	file:
+crc_32_tab	zip_crack.c	/^static const uint32_t crc_32_tab[] =$/;"	v	file:
+data	bbuf.c	/^    char * data;$/;"	m	struct:bbuf	file:
+dict	main.c	/^FILE * dict;$/;"	v
+down	bbuf.c	/^down( int semid, int sem )$/;"	f
+eoi	bbuf.c	/^    int eoi; \/* End Of Input *\/$/;"	m	struct:bbuf	file:
+eoi	bounded_buffer.c	/^    int eoi;$/;"	m	struct:bounded_buffer	file:
+file_path	zip_crack.h	/^    const char file_path[256];$/;"	m	struct:zip_archive
+finished	main.c	/^volatile bool finished = false;$/;"	v
+lock	bounded_buffer.c	/^    pthread_mutex_t lock;$/;"	m	struct:bounded_buffer	file:
+main	main.c	/^main (int argc, char * const * argv)$/;"	f
+mem	bounded_buffer.c	/^    void ** mem;$/;"	m	struct:bounded_buffer	file:
+p	main.c	/^    bbuf * p;$/;"	m	struct:__anon2	file:
+pass_len	main.c	/^size_t pass_len = 0;$/;"	v
+process_read	main.c	/^process_read(int pipe){$/;"	f
+process_write	main.c	/^process_write()$/;"	f
+r_index	bbuf.c	/^    int r_index, w_index;$/;"	m	struct:bbuf	file:
+r_index	bounded_buffer.c	/^    unsigned short capacity, size, r_index, w_index;$/;"	m	struct:bounded_buffer	file:
+read	bounded_buffer.c	/^    pthread_cond_t read, write;$/;"	m	struct:bounded_buffer	file:
+s_empty	bbuf.c	/^    s_empty,        \/* Semaphore ensuring coherent reads  *\/$/;"	e	enum:__anon1	file:
+s_full	bbuf.c	/^    s_full,         \/* Semaphore ensuring coherent writes *\/$/;"	e	enum:__anon1	file:
+s_read	bbuf.c	/^    s_read,         \/* Mutex to sync readers *\/$/;"	e	enum:__anon1	file:
+s_write	bbuf.c	/^    s_write,        \/* Mutex to sync writers *\/$/;"	e	enum:__anon1	file:
+semid	bbuf.c	/^    int semid;$/;"	m	struct:bbuf	file:
+sigusr1_handler	main.c	/^sigusr1_handler( int signal )$/;"	f	file:
+size	bounded_buffer.c	/^    unsigned short capacity, size, r_index, w_index;$/;"	m	struct:bounded_buffer	file:
+string_len	bbuf.c	/^    int capacity, string_len;$/;"	m	struct:bbuf	file:
+t	main.c	/^    bounded_buffer * t;$/;"	m	struct:__anon2	file:
+thread_read	main.c	/^thread_read(void* arg){$/;"	f
+thread_write	main.c	/^thread_write()$/;"	f
+up	bbuf.c	/^up( int semid, int sem )$/;"	f
+usage	main.c	/^usage (void)$/;"	f
+w_index	bbuf.c	/^    int r_index, w_index;$/;"	m	struct:bbuf	file:
+w_index	bounded_buffer.c	/^    unsigned short capacity, size, r_index, w_index;$/;"	m	struct:bounded_buffer	file:
+write	bounded_buffer.c	/^    pthread_cond_t read, write;$/;"	m	struct:bounded_buffer	file:
+zip_archive	zip_crack.h	/^struct zip_archive {$/;"	s
+zip_close_archive	zip_crack.c	/^zip_close_archive(struct zip_archive * archive)$/;"	f
+zip_file	main.c	/^char * zip_file;$/;"	v
+zip_load_archive	zip_crack.c	/^zip_load_archive (const char * file)$/;"	f
+zip_test_password	zip_crack.c	/^zip_test_password (struct zip_archive * archive, const char * pwd) $/;"	f
